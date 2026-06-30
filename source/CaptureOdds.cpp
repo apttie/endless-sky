@@ -21,6 +21,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <functional>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <format>
 
 using namespace std;
 
@@ -41,11 +45,14 @@ void CaptureOdds::Calculate()
 	if(powerD.empty() || powerA.empty() || !capture.empty())
 		return;
 
+
+	std::vector<double> oddsstore;
 	// The first row represents the case where the attacker has only one crew left.
 	// In that case, the defending ship can never be successfully captured.
 	capture.resize(powerD.size(), 0.);
 	casualtiesA.resize(powerD.size(), 0.);
 	casualtiesD.resize(powerD.size(), 0.);
+	oddsstore.resize(powerD.size(),0.);
 	unsigned up = 0;
 	for(unsigned a = 2; a <= powerA.size(); ++a)
 	{
@@ -53,6 +60,7 @@ void CaptureOdds::Calculate()
 		// Special case: odds for defender having only one person,
 		// because 0 people is outside the end of the table.
 		double odds = ap / (ap + powerD[0]);
+		oddsstore.push_back(odds);
 		capture.push_back(odds + (1. - odds) * capture[up]);
 		casualtiesA.push_back((1. - odds) * (casualtiesA[up] + 1.));
 		casualtiesD.push_back(odds + (1. - odds) * casualtiesD[up]);
@@ -65,11 +73,82 @@ void CaptureOdds::Calculate()
 			// the odds of success and the values for one fewer crew members
 			// for the defender or the attacker depending on who wins.
 			odds = ap / (ap + powerD[d - 1]);
+			oddsstore.push_back(odds);
 			capture.push_back(odds * capture.back() + (1. - odds) * capture[up]);
 			casualtiesA.push_back(odds * casualtiesA.back() + (1. - odds) * (casualtiesA[up] + 1.));
 			casualtiesD.push_back(odds * (casualtiesD.back() + 1.) + (1. - odds) * casualtiesD[up]);
 			++up;
 		}
+	}
+	
+	int k=0;
+	string filename = std::format("{} vs {} capture.csv",powerA.size(),powerD.size());
+	ofstream outFile(filename);
+	outFile << "vs,";
+	for ( int i = 0; i < powerD.size() ; i++){
+		outFile << format("{},",powerD[i]);
+	}
+	outFile << "\n";
+	for ( int j = 0; j < powerA.size() ; j++){
+		outFile << powerA[j] << ",";
+		for ( int i = 0; i < powerD.size() ; i++){
+			outFile << format("{},",capture[k]);
+			k++;
+		}
+		outFile << "\n";
+	}
+	outFile.close();
+
+	k=0;
+	filename = std::format("{} vs {} casualtiesA.csv",powerA.size(),powerD.size());
+	ofstream outFile1(filename);
+	outFile1 << "vs,";
+	for ( int i = 0; i < powerD.size() ; i++){
+		outFile1 << format("{},",powerD[i]);
+	}
+	outFile1 << "\n";
+	for ( int j = 0; j < powerA.size() ; j++){
+		outFile1 << powerA[j] << ",";
+		for ( int i = 0; i < powerD.size() ; i++){
+			outFile1 << format("{},",casualtiesA[k]);
+			k++;
+		}
+		outFile1 << "\n";
+	}
+	outFile1.close();
+
+	k=0;
+	filename = std::format("{} vs {} casualtiesD.csv",powerA.size(),powerD.size());
+	ofstream outFile2(filename);
+	outFile2 << "vs,";
+	for ( int i = 0; i < powerD.size() ; i++){
+		outFile2 << format("{},",powerD[i]);
+	}
+	outFile2 << "\n";
+	for ( int j = 0; j < powerA.size() ; j++){
+		outFile2 << powerA[j] << ",";
+		for ( int i = 0; i < powerD.size() ; i++){
+			outFile2 << format("{},",casualtiesD[k]);
+			k++;
+		}
+		outFile2 << "\n";
+	}
+
+	k=0;
+	filename = std::format("{} vs {} odds.csv",powerA.size(),powerD.size());
+	ofstream outFile3(filename);
+	outFile3 << "vs,";
+	for ( int i = 0; i < powerD.size() ; i++){
+		outFile3 << format("{},",powerD[i]);
+	}
+	outFile3 << "\n";
+	for ( int j = 0; j < powerA.size() ; j++){
+		outFile3 << powerA[j] << ",";
+		for ( int i = 0; i < powerD.size() ; i++){
+			outFile3 << format("{},",oddsstore[k]);
+			k++;
+		}
+		outFile3 << "\n";
 	}
 }
 
